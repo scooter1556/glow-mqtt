@@ -1,0 +1,9 @@
+[DEFAULT]
+glow_device_id = ABCDEF123456
+glow_username = brightuser
+glow_password = brightpass
+
+[MQTT]
+mqtt_server = localhost
+mqtt_port = 1883
+homeassistant = false
