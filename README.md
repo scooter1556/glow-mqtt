@@ -13,8 +13,7 @@ First rename the 'config.ini.template' file and update with your details.
 ## Docker
 Your modified 'config.ini' file needs to be available inside the container in the '/config' directory.
 
-    docker build -t glow2mqtt .
-    docker run --rm  -v $(pwd):/config glow2mqtt
+    docker run --rm  -v $(PWD):/config scootsoftware/glow2mqtt
 
 ## Docker Compose
 Your modified 'config.ini' file needs to be available inside the container in the '/config' directory. In the below example the '/etc/glow' directory on the host is used.
@@ -22,7 +21,7 @@ Your modified 'config.ini' file needs to be available inside the container in th
     version: "3"
     services:
       glow2mqtt:
-        image: glow2mqtt
+        image: scootsoftware/glow2mqtt
         container_name: glow2mqtt
         environment:
           - PYTHONUNBUFFERED=1
