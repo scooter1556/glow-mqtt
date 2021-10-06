@@ -45,6 +45,7 @@ def main(argv):
     mqtt_server = config.get('MQTT', 'mqtt_server', fallback='localhost')
     mqtt_port = config.getint('MQTT', 'mqtt_port', fallback=1883)
     homeassistant = config.getboolean('MQTT', 'homeassistant', fallback=False)
+    debug = config.getboolean('MISC', 'debug', fallback=False)
     
     s_mqtt_topic = "SMART/HILD/" + device_id
     p_mqtt_topic = "glow" + "/" + device_id
@@ -72,7 +73,7 @@ def main(argv):
 
         # Gas total m³
         gas_mtr_topic = "homeassistant/sensor/glow_" + device_id + "/gas_mtr/config"
-        gas_mtrpayload = {"device_class": "gas", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": "m³", "value_template": "{{ value_json.gas_mtr}}"}
+        gas_mtr_payload = {"device_class": "gas", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": "m³", "value_template": "{{ value_json.gas_mtr}}"}
         discovery_msgs.append({ 'topic': gas_mtr_topic, 'payload': json.dumps(gas_mtr_payload), 'retain': True })
 
         publish.multiple(discovery_msgs, hostname=mqtt_server, port=mqtt_port, auth=None)
@@ -81,16 +82,26 @@ def main(argv):
         status = {}
         
         data = json.loads(message.payload)
+
+        if(debug):
+            print(data)
         
-        if 'elecMtr' in data:      
-            status["elec_imp"] = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-            status["elec_exp"] = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-            status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
+        if 'elecMtr' in data:
+            if '00' in data['elecMtr']['0702']['00']:
+                status["elec_imp"] = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+
+            if '00' in data['elecMtr']['0702']['04']:
+                status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
+
+            if '01' in data['elecMtr']['0702']['00']:
+                status["elec_exp"] = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
             
-        if 'gasMtr' in data: 
-            status["gas_mtr"] = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
+        if 'gasMtr' in data:
+            if '00' in data['gasMtr']['0702']['00']:
+                status["gas_mtr"] = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
         
         print(status)
+
         publish.single(p_mqtt_topic, json.dumps(status), hostname=mqtt_server, port=mqtt_port, auth=None, retain=True)
 
     subscribe.callback(process_msg, s_mqtt_topic, hostname="glowmqtt.energyhive.com", auth={'username':username, 'password':password})
