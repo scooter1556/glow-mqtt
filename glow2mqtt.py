@@ -70,6 +70,11 @@ def main(argv):
         elec_exp_payload = {"device_class": "energy", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_elec_exp", "name": "glow_" + device_id + "_electric_export", "state_topic": p_mqtt_topic, "unit_of_measurement": "kWh", "value_template": "{{ value_json.elec_exp}}"}
         discovery_msgs.append({ 'topic': elec_exp_topic, 'payload': json.dumps(elec_exp_payload), 'retain': True })
 
+        # Gas total m³
+        gas_mtr_topic = "homeassistant/sensor/glow_" + device_id + "/gas_mtr/config"
+        gas_mtrpayload = {"device_class": "gas", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": "m³", "value_template": "{{ value_json.gas_mtr}}"}
+        discovery_msgs.append({ 'topic': gas_mtr_topic, 'payload': json.dumps(gas_mtr_payload), 'retain': True })
+
         publish.multiple(discovery_msgs, hostname=mqtt_server, port=mqtt_port, auth=None)
 
     def process_msg(client, userdata, message):
@@ -77,12 +82,13 @@ def main(argv):
         
         data = json.loads(message.payload)
         
-        if 'elecMtr' not in data:
-            print("No electricity meter data found in payload...")
+        if 'elecMtr' in data:      
+            status["elec_imp"] = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+            status["elec_exp"] = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+            status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
             
-        status["elec_imp"] = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-        status["elec_exp"] = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-        status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
+        if 'gasMtr' in data: 
+            status["gas_mtr"] = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
         
         print(status)
         publish.single(p_mqtt_topic, json.dumps(status), hostname=mqtt_server, port=mqtt_port, auth=None, retain=True)
