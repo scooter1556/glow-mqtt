@@ -1,13 +1,34 @@
 #!/usr/bin/python
 
-import paho.mqtt.publish as publish
-import paho.mqtt.subscribe as subscribe
+import paho.mqtt.client as mqtt
+import argparse
 import sys
 import configparser
 import getopt
 import json
 
-config_file = "config.ini"
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description='Glow MQTT Client.')
+parser.add_argument('--config',required=False, default='config.ini',  help='Path to config file. default:config.ini')
+args = vars(parser.parse_args())
+
+# Read config file
+config = configparser.ConfigParser()
+config.read_file(open(args['config']))
+
+# Variables
+device_id = config.get('DEFAULT', 'glow_device_id')
+username = config.get('DEFAULT', 'glow_username')
+password = config.get('DEFAULT', 'glow_password')
+mqtt_server = config.get('MQTT', 'mqtt_server', fallback='localhost')
+mqtt_port = config.getint('MQTT', 'mqtt_port', fallback=1883)
+mqtt_username = config.get('MQTT', 'mqtt_username', fallback='')
+mqtt_password = config.get('MQTT', 'mqtt_password', fallback='')
+homeassistant = config.getboolean('MQTT', 'homeassistant', fallback=False)
+debug = config.getboolean('MISC', 'debug', fallback=False)
+
+s_mqtt_topic = "SMART/HILD/" + device_id
+p_mqtt_topic = "glow" + "/" + device_id
 
 def twos_complement(hexstr):
     value = int(hexstr,16)
@@ -18,95 +39,77 @@ def twos_complement(hexstr):
         
     return value
 
-def main(argv):
-    # Get command-line arguments
-    try:
-      opts, args = getopt.getopt(argv,"hc:",["config="])
-    except getopt.GetoptError:
-        print('glow2mqtt.py -c <configfile>')
-        sys.exit(2)
+def on_connect(client, obj, flags, rc):
+    print("MQTT connected...")
 
-    for opt, arg in opts:
-        if opt == '-h':
-            print('glow2mqtt.py -c <configfile>')
-            sys.exit()
+def on_glow_connect(client, obj, flags, rc):
+    print("Connected to Glow MQTT broker...")
+    client.subscribe(s_mqtt_topic, 0)
 
-        elif opt in ("-c", "--config"):
-            config_file = arg
-
-    # Read config file
-    config = configparser.ConfigParser()
-    config.read_file(open(config_file))
-
-    # Variables
-    device_id = config.get('DEFAULT', 'glow_device_id')
-    username = config.get('DEFAULT', 'glow_username')
-    password = config.get('DEFAULT', 'glow_password')
-    mqtt_server = config.get('MQTT', 'mqtt_server', fallback='localhost')
-    mqtt_port = config.getint('MQTT', 'mqtt_port', fallback=1883)
-    mqtt_username = config.get('MQTT', 'mqtt_username', fallback='')
-    mqtt_password = config.get('MQTT', 'mqtt_password', fallback='')
-    homeassistant = config.getboolean('MQTT', 'homeassistant', fallback=False)
-    debug = config.getboolean('MISC', 'debug', fallback=False)
+def process_msg(client, userdata, message):
+    status = {}
     
-    s_mqtt_topic = "SMART/HILD/" + device_id
-    p_mqtt_topic = "glow" + "/" + device_id
+    data = json.loads(message.payload)
 
-    # Home Assistant
-    if (homeassistant):
-        print("Configuring Home Assistant...")
+    if(debug):
+        print(data)
 
-        discovery_msgs = []
+    if 'elecMtr' in data:
+        if '00' in data['elecMtr']['0702']['00']:
+            status["elec_imp"] = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
 
-        # Current power in watts
-        watt_now_topic = "homeassistant/sensor/glow_" + device_id + "/watt_now/config"
-        watt_now_payload = {"device_class": "power", "state_class": "measurement", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_watt_now", "name": "glow_" + device_id + "_current_power", "state_topic": p_mqtt_topic, "unit_of_measurement": "W", "value_template": "{{ value_json.watt_now}}" }
-        discovery_msgs.append({ 'topic': watt_now_topic, 'payload': json.dumps(watt_now_payload), 'retain': True })
+        if '00' in data['elecMtr']['0702']['04']:
+            status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
 
-        # Electricity import total kWH
-        elec_imp_topic = "homeassistant/sensor/glow_" + device_id + "/elec_imp/config"
-        elec_imp_payload = {"device_class": "energy", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_elec_imp", "name": "glow_" + device_id + "_electric_import", "state_topic": p_mqtt_topic, "unit_of_measurement": "kWh", "value_template": "{{ value_json.elec_imp}}"}
-        discovery_msgs.append({ 'topic': elec_imp_topic, 'payload': json.dumps(elec_imp_payload), 'retain': True })
-
-        # Electricity export total kWH
-        elec_exp_topic = "homeassistant/sensor/glow_" + device_id + "/elec_exp/config"
-        elec_exp_payload = {"device_class": "energy", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_elec_exp", "name": "glow_" + device_id + "_electric_export", "state_topic": p_mqtt_topic, "unit_of_measurement": "kWh", "value_template": "{{ value_json.elec_exp}}"}
-        discovery_msgs.append({ 'topic': elec_exp_topic, 'payload': json.dumps(elec_exp_payload), 'retain': True })
-
-        # Gas total m³
-        gas_mtr_topic = "homeassistant/sensor/glow_" + device_id + "/gas_mtr/config"
-        gas_mtr_payload = {"device_class": "gas", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": "m³", "value_template": "{{ value_json.gas_mtr}}"}
-        discovery_msgs.append({ 'topic': gas_mtr_topic, 'payload': json.dumps(gas_mtr_payload), 'retain': True })
-
-        publish.multiple(discovery_msgs, hostname=mqtt_server, port=mqtt_port, auth={'username':mqtt_username, 'password':mqtt_password})
-
-    def process_msg(client, userdata, message):
-        status = {}
+        if '01' in data['elecMtr']['0702']['00']:
+            status["elec_exp"] = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
         
-        data = json.loads(message.payload)
+    if 'gasMtr' in data:
+        if '00' in data['gasMtr']['0702']['00']:
+            status["gas_mtr"] = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
 
-        if(debug):
-            print(data)
-        
-        if 'elecMtr' in data:
-            if '00' in data['elecMtr']['0702']['00']:
-                status["elec_imp"] = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+    print(status)
 
-            if '00' in data['elecMtr']['0702']['04']:
-                status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
+    mqttc.publish(p_mqtt_topic, json.dumps(status), retain=True)
 
-            if '01' in data['elecMtr']['0702']['00']:
-                status["elec_exp"] = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-            
-        if 'gasMtr' in data:
-            if '00' in data['gasMtr']['0702']['00']:
-                status["gas_mtr"] = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
-        
-        print(status)
+# Create MQTT client
+mqttc = mqtt.Client()
+mqttc.on_connect = on_connect
+mqttc.username_pw_set(mqtt_username,mqtt_password)
+mqttc.connect(mqtt_server, mqtt_port, 60)
+mqttc.loop_start()
 
-        publish.single(p_mqtt_topic, json.dumps(status), hostname=mqtt_server, port=mqtt_port, auth={'username':mqtt_username, 'password':mqtt_password}, retain=True)
+# Home Assistant
+if (homeassistant):
+    print("Configuring Home Assistant...")
 
-    subscribe.callback(process_msg, s_mqtt_topic, hostname="glowmqtt.energyhive.com", auth={'username':username, 'password':password})
+    discovery_msgs = []
 
-if __name__ == "__main__":
-   main(sys.argv[1:])
+    # Current power in watts
+    watt_now_topic = "homeassistant/sensor/glow_" + device_id + "/watt_now/config"
+    watt_now_payload = {"device_class": "power", "state_class": "measurement", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_watt_now", "name": "glow_" + device_id + "_current_power", "state_topic": p_mqtt_topic, "unit_of_measurement": "W", "value_template": "{{ value_json.watt_now}}" }
+    mqttc.publish(watt_now_topic, json.dumps(watt_now_payload), retain=True)
+
+    # Electricity import total kWH
+    elec_imp_topic = "homeassistant/sensor/glow_" + device_id + "/elec_imp/config"
+    elec_imp_payload = {"device_class": "energy", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_elec_imp", "name": "glow_" + device_id + "_electric_import", "state_topic": p_mqtt_topic, "unit_of_measurement": "kWh", "value_template": "{{ value_json.elec_imp}}"}
+    mqttc.publish(elec_imp_topic, json.dumps(elec_imp_payload), retain=True)
+
+    # Electricity export total kWH
+    elec_exp_topic = "homeassistant/sensor/glow_" + device_id + "/elec_exp/config"
+    elec_exp_payload = {"device_class": "energy", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_elec_exp", "name": "glow_" + device_id + "_electric_export", "state_topic": p_mqtt_topic, "unit_of_measurement": "kWh", "value_template": "{{ value_json.elec_exp}}"}
+    mqttc.publish(elec_exp_topic, json.dumps(elec_exp_payload), retain=True)
+
+    # Gas total m³
+    gas_mtr_topic = "homeassistant/sensor/glow_" + device_id + "/gas_mtr/config"
+    gas_mtr_payload = {"device_class": "gas", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": "m³", "value_template": "{{ value_json.gas_mtr}}"}
+    mqttc.publish(gas_mtr_topic, json.dumps(gas_mtr_payload), retain=True)
+
+# Create Glow MQTT client
+mqttg = mqtt.Client()
+mqttg.on_connect = on_glow_connect
+mqttg.on_message = process_msg
+mqttg.username_pw_set(username,password)
+mqttg.connect("glowmqtt.energyhive.com", 1883, 60)
+mqttg.loop_forever()
+

@@ -8,7 +8,7 @@ First rename the 'config.ini.template' file and update with your details.
 
 ## Native
 
-    python3 ./glow2mqtt.py -c config.ini
+    python3 ./glow2mqtt.py --config config.ini
 
 ## Docker
 Your modified 'config.ini' file needs to be available inside the container in the '/config' directory.
