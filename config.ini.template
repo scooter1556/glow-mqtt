@@ -6,6 +6,8 @@ glow_password = brightpass
 [MQTT]
 mqtt_server = localhost
 mqtt_port = 1883
+mqtt_username = mqttuser
+mqtt_password = mqttpass
 homeassistant = false
 
 [MISC]

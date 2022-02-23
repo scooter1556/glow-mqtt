@@ -44,6 +44,8 @@ def main(argv):
     password = config.get('DEFAULT', 'glow_password')
     mqtt_server = config.get('MQTT', 'mqtt_server', fallback='localhost')
     mqtt_port = config.getint('MQTT', 'mqtt_port', fallback=1883)
+    mqtt_username = config.get('MQTT', 'mqtt_username', fallback='')
+    mqtt_password = config.get('MQTT', 'mqtt_password', fallback='')
     homeassistant = config.getboolean('MQTT', 'homeassistant', fallback=False)
     debug = config.getboolean('MISC', 'debug', fallback=False)
     
@@ -76,7 +78,7 @@ def main(argv):
         gas_mtr_payload = {"device_class": "gas", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": "m³", "value_template": "{{ value_json.gas_mtr}}"}
         discovery_msgs.append({ 'topic': gas_mtr_topic, 'payload': json.dumps(gas_mtr_payload), 'retain': True })
 
-        publish.multiple(discovery_msgs, hostname=mqtt_server, port=mqtt_port, auth=None)
+        publish.multiple(discovery_msgs, hostname=mqtt_server, port=mqtt_port, auth={'username':mqtt_username, 'password':mqtt_password})
 
     def process_msg(client, userdata, message):
         status = {}
@@ -102,7 +104,7 @@ def main(argv):
         
         print(status)
 
-        publish.single(p_mqtt_topic, json.dumps(status), hostname=mqtt_server, port=mqtt_port, auth=None, retain=True)
+        publish.single(p_mqtt_topic, json.dumps(status), hostname=mqtt_server, port=mqtt_port, auth={'username':mqtt_username, 'password':mqtt_password}, retain=True)
 
     subscribe.callback(process_msg, s_mqtt_topic, hostname="glowmqtt.energyhive.com", auth={'username':username, 'password':password})
 
