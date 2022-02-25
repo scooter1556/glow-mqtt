@@ -3,29 +3,31 @@
 import paho.mqtt.client as mqtt
 import argparse
 import sys
-import configparser
-import getopt
 import json
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='Glow MQTT Client.')
-parser.add_argument('--config',required=False, default='config.ini',  help='Path to config file. default:config.ini')
+parser.add_argument('--glow_device', required=True, help='Glow device ID.')
+parser.add_argument('--glow_username', required=True, help='Glow username.')
+parser.add_argument('--glow_password', required=True, help='Glow password.')
+parser.add_argument('--mqtt_address', required=False, default='localhost',  help='MQTT broker address. default:localhost')
+parser.add_argument('--mqtt_port', required=False, default=1883, help='MQTT port. default: 1883')
+parser.add_argument('--mqtt_username', required=False, default='', help='MQTT username.')
+parser.add_argument('--mqtt_password', required=False, default='', help='MQTT password.')
+parser.add_argument('--hass', default=False, action='store_true', help='Enable Home Assistant auto-discovery')
+parser.add_argument('--debug', default=False, action='store_true', help='Print debug information')
 args = vars(parser.parse_args())
 
-# Read config file
-config = configparser.ConfigParser()
-config.read_file(open(args['config']))
-
 # Variables
-device_id = config.get('DEFAULT', 'glow_device_id')
-username = config.get('DEFAULT', 'glow_username')
-password = config.get('DEFAULT', 'glow_password')
-mqtt_server = config.get('MQTT', 'mqtt_server', fallback='localhost')
-mqtt_port = config.getint('MQTT', 'mqtt_port', fallback=1883)
-mqtt_username = config.get('MQTT', 'mqtt_username', fallback='')
-mqtt_password = config.get('MQTT', 'mqtt_password', fallback='')
-homeassistant = config.getboolean('MQTT', 'homeassistant', fallback=False)
-debug = config.getboolean('MISC', 'debug', fallback=False)
+device_id = args['glow_device']
+username = args['glow_username']
+password = args['glow_password']
+mqtt_address = args['mqtt_address']
+mqtt_port = args['mqtt_port']
+mqtt_username = args['mqtt_username']
+mqtt_password = args['mqtt_password']
+homeassistant = args.get('homeassistant')
+debug = args.get('debug')
 
 s_mqtt_topic = "SMART/HILD/" + device_id
 p_mqtt_topic = "glow" + "/" + device_id
@@ -76,7 +78,7 @@ def process_msg(client, userdata, message):
 mqttc = mqtt.Client()
 mqttc.on_connect = on_connect
 mqttc.username_pw_set(mqtt_username,mqtt_password)
-mqttc.connect(mqtt_server, mqtt_port, 60)
+mqttc.connect(mqtt_address, mqtt_port, 60)
 mqttc.loop_start()
 
 # Home Assistant
