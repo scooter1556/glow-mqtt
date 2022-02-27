@@ -11,7 +11,7 @@ parser.add_argument('--glow_device', required=True, help='Glow device ID.')
 parser.add_argument('--glow_username', required=True, help='Glow username.')
 parser.add_argument('--glow_password', required=True, help='Glow password.')
 parser.add_argument('--mqtt_address', required=False, default='localhost',  help='MQTT broker address. default:localhost')
-parser.add_argument('--mqtt_port', required=False, default=1883, help='MQTT port. default: 1883')
+parser.add_argument('--mqtt_port', required=False, type=int, default=1883, help='MQTT port. default: 1883')
 parser.add_argument('--mqtt_username', required=False, default='', help='MQTT username.')
 parser.add_argument('--mqtt_password', required=False, default='', help='MQTT password.')
 parser.add_argument('--homeassistant', default=False, action='store_true', help='Enable Home Assistant auto-discovery')
@@ -23,7 +23,7 @@ device_id = args['glow_device']
 username = args['glow_username']
 password = args['glow_password']
 mqtt_address = args['mqtt_address']
-mqtt_port = args['mqtt_port']
+mqtt_port = int(args['mqtt_port'])
 mqtt_username = args['mqtt_username']
 mqtt_password = args['mqtt_password']
 homeassistant = args.get('homeassistant')
