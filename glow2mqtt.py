@@ -14,7 +14,7 @@ parser.add_argument('--mqtt_address', required=False, default='localhost',  help
 parser.add_argument('--mqtt_port', required=False, default=1883, help='MQTT port. default: 1883')
 parser.add_argument('--mqtt_username', required=False, default='', help='MQTT username.')
 parser.add_argument('--mqtt_password', required=False, default='', help='MQTT password.')
-parser.add_argument('--hass', default=False, action='store_true', help='Enable Home Assistant auto-discovery')
+parser.add_argument('--homeassistant', default=False, action='store_true', help='Enable Home Assistant auto-discovery')
 parser.add_argument('--debug', default=False, action='store_true', help='Print debug information')
 args = vars(parser.parse_args())
 
