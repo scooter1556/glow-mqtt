@@ -7,10 +7,11 @@ import json
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='Glow MQTT Client.')
+parser.add_argument('--glow_provider', required=False, default='HILD', help='Glow device provder. default: HILD')
 parser.add_argument('--glow_device', required=True, help='Glow device ID.')
 parser.add_argument('--glow_username', required=True, help='Glow username.')
 parser.add_argument('--glow_password', required=True, help='Glow password.')
-parser.add_argument('--mqtt_address', required=False, default='localhost',  help='MQTT broker address. default:localhost')
+parser.add_argument('--mqtt_address', required=False, default='localhost',  help='MQTT broker address. default: localhost')
 parser.add_argument('--mqtt_port', required=False, type=int, default=1883, help='MQTT port. default: 1883')
 parser.add_argument('--mqtt_username', required=False, default='', help='MQTT username.')
 parser.add_argument('--mqtt_password', required=False, default='', help='MQTT password.')
@@ -19,6 +20,7 @@ parser.add_argument('--debug', default=False, action='store_true', help='Print d
 args = vars(parser.parse_args())
 
 # Variables
+provider = args['glow_provider']
 device_id = args['glow_device']
 username = args['glow_username']
 password = args['glow_password']
@@ -29,7 +31,7 @@ mqtt_password = args['mqtt_password']
 homeassistant = args.get('homeassistant')
 debug = args.get('debug')
 
-s_mqtt_topic = "SMART/HILD/" + device_id
+s_mqtt_topic = "SMART/" + provider + "/" + device_id
 p_mqtt_topic = "glow" + "/" + device_id
 
 def twos_complement(hexstr):
