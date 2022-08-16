@@ -136,6 +136,7 @@ def configure_homeassistant(data):
     electric_units = "kWh"
     gas_meter = False
     gas_units = "kWh"
+    gas_class = "energy"
 
     if local:
         if 'electricitymeter' in data:
@@ -151,6 +152,11 @@ def configure_homeassistant(data):
                 if 'import' in data['gasmeter']['energy']:
                     gas_meter = True
                     gas_units = data['gasmeter']['energy']['import']['units']
+
+                    if gas_units == "kWh":
+                        gas_class = "energy"
+                    else:
+                        gas_class = "gas"
     else:
         if 'elecMtr' in data:
             if '00' in data['elecMtr']['0702']['00']:
@@ -165,8 +171,10 @@ def configure_homeassistant(data):
 
                 if int(data["gasMtr"]["0702"]["03"]["00"], 16) == 0:
                     gas_units = "m³"
+                    gas_class = "gas"
                 elif int(data["gasMtr"]["0702"]["03"]["00"], 16) == 1:
                     gas_units = "kWh"
+                    gas_class = "energy"
 
     discovery_msgs = []
 
@@ -190,7 +198,7 @@ def configure_homeassistant(data):
     if gas_meter:
         # Gas total
         gas_mtr_topic = "homeassistant/sensor/glow_" + device_id + "/gas_mtr/config"
-        gas_mtr_payload = {"device_class": "gas", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": gas_units, "value_template": "{{ value_json.gas_mtr}}"}
+        gas_mtr_payload = {"device_class": gas_class, "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": gas_units, "value_template": "{{ value_json.gas_mtr}}"}
         mqttc.publish(gas_mtr_topic, json.dumps(gas_mtr_payload), retain=True)
 
     homeassistant = False
