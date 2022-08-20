@@ -170,11 +170,11 @@ def configure_homeassistant(data):
                 gas_meter = True
 
                 if int(data["gasMtr"]["0702"]["03"]["00"], 16) == 0:
-                    gas_units = "m³"
-                    gas_class = "gas"
-                elif int(data["gasMtr"]["0702"]["03"]["00"], 16) == 1:
                     gas_units = "kWh"
                     gas_class = "energy"
+                elif int(data["gasMtr"]["0702"]["03"]["00"], 16) == 1:
+                    gas_units = "m³"
+                    gas_class = "gas"
 
     discovery_msgs = []
 
