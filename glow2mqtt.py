@@ -75,17 +75,26 @@ def process_msg(client, userdata, message):
 
     if 'elecMtr' in data:
         if '00' in data['elecMtr']['0702']['00']:
-            status["elec_imp"] = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+            elec_imp = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+
+            if elec_imp > 0:
+                status["elec_imp"] = elec_imp
 
         if '00' in data['elecMtr']['0702']['04']:
             status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
 
         if '01' in data['elecMtr']['0702']['00']:
-            status["elec_exp"] = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+            elec_exp = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+
+            if elec_exp > 0:
+                status["elec_exp"] = elec_exp
         
     if 'gasMtr' in data:
         if '00' in data['gasMtr']['0702']['00']:
-            status["gas_mtr"] = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
+            gas_mtr = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
+
+            if gas_mtr > 0:
+                status["gas_mtr"] = gas_mtr
 
     print(status)
 
@@ -109,10 +118,16 @@ def process_local_msg(client, userdata, message):
     if 'electricitymeter' in data:
         if 'energy' in data['electricitymeter']:
             if 'export' in data['electricitymeter']['energy']:
-                status["elec_exp"] = data['electricitymeter']['energy']['export']['cumulative']
+                elec_exp = data['electricitymeter']['energy']['export']['cumulative']
+
+                if elec_exp > 0:
+                    status["elec_exp"] = elec_exp
 
             if 'import' in data['electricitymeter']['energy']:
-                status["elec_imp"] = data['electricitymeter']['energy']['import']['cumulative']
+                elec_imp = data['electricitymeter']['energy']['import']['cumulative']
+
+                if elec_imp > 0:
+                    status["elec_imp"] = elec_imp
 
         if 'power' in data['electricitymeter']:
             status["watt_now"] = int(data['electricitymeter']['power']['value'] * 1000)
@@ -120,7 +135,10 @@ def process_local_msg(client, userdata, message):
     if 'gasmeter' in data:
         if 'energy' in data['gasmeter']:
             if 'import' in data['gasmeter']['energy']:
-                status["gas_mtr"] = data['gasmeter']['energy']['import']['cumulative']
+                gas_mtr = data['gasmeter']['energy']['import']['cumulative']
+
+                if gas_mtr > 0:
+                    status["gas_mtr"] = gas_mtr
 
     print(status)
 
