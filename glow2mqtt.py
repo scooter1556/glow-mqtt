@@ -221,22 +221,26 @@ def configure_homeassistant(data):
 
     homeassistant = False
 
-# Create MQTT client
-mqttc = mqtt.Client()
-mqttc.on_connect = on_connect
-mqttc.on_message = process_local_msg
-mqttc.username_pw_set(mqtt_username,mqtt_password)
-mqttc.connect(mqtt_address, mqtt_port, 60)
+try:
+    # Create MQTT client
+    mqttc = mqtt.Client()
+    mqttc.on_connect = on_connect
+    mqttc.on_message = process_local_msg
+    mqttc.username_pw_set(mqtt_username,mqtt_password)
+    mqttc.connect(mqtt_address, mqtt_port, 60)
 
-if not local:
-    # Create Glow MQTT client
-    mqttg = mqtt.Client()
-    mqttg.on_connect = on_glow_connect
-    mqttg.on_message = process_msg
-    mqttg.username_pw_set(username,password)
-    mqttg.connect("glowmqtt.energyhive.com", 1883, 60)
-    mqttc.loop_start()
-    mqttg.loop_forever()
-else:
-    mqttc.loop_forever()
+    if not local:
+        # Create Glow MQTT client
+        mqttg = mqtt.Client()
+        mqttg.on_connect = on_glow_connect
+        mqttg.on_message = process_msg
+        mqttg.username_pw_set(username,password)
+        mqttg.connect("glowmqtt.energyhive.com", 1883, 60)
+        mqttc.loop_start()
+        mqttg.loop_forever()
+    else:
+        mqttc.loop_forever()
+except KeyboardInterrupt:
+    print("...Exiting")
 
+sys.exit()
