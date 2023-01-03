@@ -1,9 +1,10 @@
 #!/usr/bin/python
 
-import paho.mqtt.client as mqtt
 import argparse
-import sys
 import json
+import sys
+
+import paho.mqtt.client as mqtt
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='Glow MQTT Client')
@@ -63,7 +64,7 @@ def process_msg(client, userdata, message):
     
     try:
         data = json.loads(message.payload)
-    except JSONDecodeError:
+    except json.JSONDecodeError:
         return
 
     if debug:
@@ -116,7 +117,7 @@ def process_local_msg(client, userdata, message):
 
     try:
         data = json.loads(message.payload)
-    except JSONDecodeError:
+    except json.JSONDecodeError:
         return
 
     if debug:
@@ -208,8 +209,6 @@ def configure_homeassistant(data):
                 elif int(data["gasMtr"]["0702"]["03"]["00"], 16) == 1:
                     gas_units = "m³"
                     gas_class = "gas"
-
-    discovery_msgs = []
 
     if electric_import:
         # Current power
