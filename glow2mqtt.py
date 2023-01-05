@@ -1,10 +1,26 @@
-#!/usr/bin/python
+#
+# Copyright (c) 2022 Scott Ware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import argparse
 import json
 import sys
 
 import paho.mqtt.client as mqtt
+
+from hass_configurator import HassConfigurator
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='Glow MQTT Client')
@@ -70,9 +86,8 @@ def process_msg(client, userdata, message):
     if debug:
         print(data)
 
-    # Configure on first message
     if homeassistant:
-        configure_homeassistant(data)
+        HASS_CONFIGURATOR.process_data(data)
 
     if 'elecMtr' in data:
         if '0702' in data['elecMtr']:
@@ -86,15 +101,17 @@ def process_msg(client, userdata, message):
                     if elec_imp > 0:
                         status["elec_imp"] = elec_imp
 
+                if '01' in data['elecMtr']['0702']['00'] and \
+                   '01' in data['elecMtr']['0702']['03'] and \
+                   '02' in data['elecMtr']['0702']['03']:
+                    elec_exp = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
+
+                    if elec_exp > 0:
+                        status["elec_exp"] = elec_exp
+
             if '04' in data['elecMtr']['0702']:
                 if '00' in data['elecMtr']['0702']['04']:
                     status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
-
-        if '01' in data['elecMtr']['0702']['00']:
-            elec_exp = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-
-            if elec_exp > 0:
-                status["elec_exp"] = elec_exp
         
     if 'gasMtr' in data:
         if '0702' in data['gasMtr']:
@@ -123,9 +140,8 @@ def process_local_msg(client, userdata, message):
     if debug:
         print(data)
 
-    # Configure on first message
     if homeassistant:
-        configure_homeassistant(data)
+        HASS_CONFIGURATOR.process_data(data)
 
     if 'electricitymeter' in data:
         if 'energy' in data['electricitymeter']:
@@ -160,81 +176,6 @@ def process_local_msg(client, userdata, message):
 
     mqttc.publish(p_mqtt_topic, json.dumps(status), retain=True)
 
-def configure_homeassistant(data):
-    global homeassistant
-
-    print("Configuring Home Assistant...")
-
-    electric_import = False
-    electric_export = False
-    electric_units = "kWh"
-    gas_meter = False
-    gas_units = "kWh"
-    gas_class = "energy"
-
-    if local:
-        if 'electricitymeter' in data:
-            if 'energy' in data['electricitymeter']:
-                if 'export' in data['electricitymeter']['energy']:
-                    electric_export = True
-
-                if 'import' in data['electricitymeter']['energy']:
-                    electric_import = True
-
-        if 'gasmeter' in data:
-            if 'energy' in data['gasmeter']:
-                if 'import' in data['gasmeter']['energy']:
-                    gas_meter = True
-                    gas_units = data['gasmeter']['energy']['import']['units']
-
-                    if gas_units == "kWh":
-                        gas_class = "energy"
-                    else:
-                        gas_class = "gas"
-    else:
-        if 'elecMtr' in data:
-            if '00' in data['elecMtr']['0702']['00']:
-                electric_import = True
-
-            if '01' in data['elecMtr']['0702']['00']:
-                electric_export = True
-
-        if 'gasMtr' in data:
-            if '00' in data['gasMtr']['0702']['00']:
-                gas_meter = True
-
-                if int(data["gasMtr"]["0702"]["03"]["00"], 16) == 0:
-                    gas_units = "kWh"
-                    gas_class = "energy"
-                elif int(data["gasMtr"]["0702"]["03"]["00"], 16) == 1:
-                    gas_units = "m³"
-                    gas_class = "gas"
-
-    if electric_import:
-        # Current power
-        watt_now_topic = "homeassistant/sensor/glow_" + device_id + "/watt_now/config"
-        watt_now_payload = {"device_class": "power", "state_class": "measurement", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_watt_now", "name": "glow_" + device_id + "_current_power", "state_topic": p_mqtt_topic, "unit_of_measurement": "W", "value_template": "{{ value_json.watt_now}}" }
-        mqttc.publish(watt_now_topic, json.dumps(watt_now_payload), retain=True)
-
-        # Electricity import total
-        elec_imp_topic = "homeassistant/sensor/glow_" + device_id + "/elec_imp/config"
-        elec_imp_payload = {"device_class": "energy", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_elec_imp", "name": "glow_" + device_id + "_electric_import", "state_topic": p_mqtt_topic, "unit_of_measurement": electric_units, "value_template": "{{ value_json.elec_imp}}"}
-        mqttc.publish(elec_imp_topic, json.dumps(elec_imp_payload), retain=True)
-
-    if electric_export:
-        # Electricity export total
-        elec_exp_topic = "homeassistant/sensor/glow_" + device_id + "/elec_exp/config"
-        elec_exp_payload = {"device_class": "energy", "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_elec_exp", "name": "glow_" + device_id + "_electric_export", "state_topic": p_mqtt_topic, "unit_of_measurement": electric_units, "value_template": "{{ value_json.elec_exp}}"}
-        mqttc.publish(elec_exp_topic, json.dumps(elec_exp_payload), retain=True)
-
-    if gas_meter:
-        # Gas total
-        gas_mtr_topic = "homeassistant/sensor/glow_" + device_id + "/gas_mtr/config"
-        gas_mtr_payload = {"device_class": gas_class, "state_class": "total_increasing", "device": {"identifiers": ["glow_" + device_id], "manufacturer": "Glow", "name": device_id}, "unique_id": "glow_" + device_id + "_gas_mtr", "name": "glow_" + device_id + "_gas_meter", "state_topic": p_mqtt_topic, "unit_of_measurement": gas_units, "value_template": "{{ value_json.gas_mtr}}"}
-        mqttc.publish(gas_mtr_topic, json.dumps(gas_mtr_payload), retain=True)
-
-    homeassistant = False
-
 try:
     # Create MQTT client
     mqttc = mqtt.Client()
@@ -242,6 +183,11 @@ try:
     mqttc.on_message = process_local_msg
     mqttc.username_pw_set(mqtt_username,mqtt_password)
     mqttc.connect(mqtt_address, mqtt_port, 60)
+
+    # Home Assistant
+    HASS_CONFIGURATOR = None
+    if homeassistant:
+        HASS_CONFIGURATOR = HassConfigurator(mqttc, device_id, p_mqtt_topic, local)
 
     if not local:
         # Create Glow MQTT client
