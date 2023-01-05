@@ -1,0 +1,184 @@
+{
+    "payloads": [
+        {
+            "name": "electric_normal",
+            "topic": "glow/A1234BC5DE67/SENSOR/electricitymeter",
+            "payload": {
+                "electricitymeter": {
+                    "timestamp": "2023-01-01T00:00:00Z",
+                    "energy": {
+                        "export": {
+                            "cumulative": 125.987,
+                            "units": "kWh"
+                        },
+                        "import": {
+                            "cumulative": 12000.123,
+                            "day": 5.987,
+                            "week": 40.123,
+                            "month": 600.123,
+                            "units": "kWh",
+                            "mpan": "1234567890987",
+                            "supplier": "Scoot Energy",
+                            "price": {
+                                "unitrate": 0.33333,
+                                "standingcharge": 0.50000
+                            }
+                        }
+                    },
+                    "power": {
+                        "value": 2.123,
+                        "units": "kW"
+                    }
+                }
+            }
+        },
+        {
+            "name": "electric_invalid",
+            "topic": "glow/A1234BC5DE67/SENSOR/electricitymeter",
+            "payload": {
+                "electricitymeter": {
+                    "timestamp": "2023-01-01T00:00:00Z",
+                    "energy": {
+                        "export": {
+                            "units": "kWh"
+                        },
+                        "import": {
+                            "supplier": "Scoot Energy",
+                            "price": {
+                                "unitrate": 0.33333,
+                                "standingcharge": 0.50000
+                            }
+                        }
+                    },
+                    "power": {
+                        "units": "kW"
+                    }
+                }
+            }
+        },
+        {
+            "name": "electric_negative_power",
+            "topic": "glow/A1234BC5DE67/SENSOR/electricitymeter",
+            "payload": {
+                "electricitymeter": {
+                    "timestamp": "2023-01-01T00:00:00Z",
+                    "energy": {
+                        "export": {
+                            "cumulative": 0.000,
+                            "units": "kWh"
+                        },
+                        "import": {
+                            "cumulative": 12000.123,
+                            "day": 5.987,
+                            "week": 40.123,
+                            "month": 600.123,
+                            "units": "kWh",
+                            "mpan": "1234567890987",
+                            "supplier": "Scoot Energy",
+                            "price": {
+                                "unitrate": 0.33333,
+                                "standingcharge": 0.50000
+                            }
+                        }
+                    },
+                    "power": {
+                        "value": -0.678,
+                        "units": "kW"
+                    }
+                }
+            }
+        },
+        {
+            "name": "electric_zero_power",
+            "topic": "glow/A1234BC5DE67/SENSOR/electricitymeter",
+            "payload": {
+                "electricitymeter": {
+                    "timestamp": "2023-01-01T00:00:00Z",
+                    "energy": {
+                        "export": {
+                            "cumulative": 0.000,
+                            "units": "kWh"
+                        },
+                        "import": {
+                            "cumulative": 12000.123,
+                            "day": 5.987,
+                            "week": 40.123,
+                            "month": 600.123,
+                            "units": "kWh",
+                            "mpan": "1234567890987",
+                            "supplier": "Scoot Energy",
+                            "price": {
+                                "unitrate": 0.33333,
+                                "standingcharge": 0.50000
+                            }
+                        }
+                    },
+                    "power": {
+                        "value": 0.000,
+                        "units": "kW"
+                    }
+                }
+            }
+        },
+        {
+            "name": "gas_normal",
+            "topic": "glow/A1234BC5DE67/SENSOR/gasmeter",
+            "payload": {
+                "gasmeter": {
+                    "timestamp": "2023-01-01T00:00:00Z",
+                    "energy": {
+                        "import": {
+                            "cumulative": 55690.531,
+                            "day": 66.494,
+                            "week": 66.494,
+                            "month": 129.801,
+                            "units": "kWh",
+                            "cumulativevol": 4963.225,
+                            "cumulativevolunits": "m3",
+                            "dayvol": 66.494,
+                            "weekvol": 66.494,
+                            "monthvol": 129.801,
+                            "dayweekmonthvolunits": "kWh",
+                            "mprn": "0123456789",
+                            "supplier": "Scoot Energy",
+                            "price": {
+                                "unitrate": 0.10460,
+                                "standingcharge": 0.26840
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "gas_zero_volume",
+            "topic": "glow/A1234BC5DE67/SENSOR/gasmeter",
+            "payload": {
+                "gasmeter": {
+                    "timestamp": "2023-01-01T00:00:00Z",
+                    "energy": {
+                        "import": {
+                            "cumulative": 0.000,
+                            "day": 0.000,
+                            "week": 0.000,
+                            "month": 0.000,
+                            "units": "kWh",
+                            "cumulativevol": 0.000,
+                            "cumulativevolunits": "m3",
+                            "dayvol": 0.000,
+                            "weekvol": 0.000,
+                            "monthvol": 0.000,
+                            "dayweekmonthvolunits": "kWh",
+                            "mprn": "0123456789",
+                            "supplier": "Scoot Energy",
+                            "price": {
+                                "unitrate": 0.10460,
+                                "standingcharge": 0.26840
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
