@@ -20,7 +20,8 @@ import sys
 
 import paho.mqtt.client as mqtt
 
-from hass_configurator import HassConfigurator
+from lib.glow_processor import GlowProcessor
+from lib.hass_configurator import HassConfigurator
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='Glow MQTT Client')
@@ -35,6 +36,7 @@ parser.add_argument('--mqtt_password', required=False, default='', help='MQTT pa
 parser.add_argument('--homeassistant', default=False, action='store_true', help='Enable Home Assistant auto-discovery')
 parser.add_argument('--topic', required=False, default='glow', help='Local MQTT topic default: glow')
 parser.add_argument('--local', default=False, action='store_true', help='Use local MQTT mode')
+parser.add_argument('--cache', default=False, action='store_true', help='Enable data caching')
 parser.add_argument('--debug', default=False, action='store_true', help='Print debug information')
 args = vars(parser.parse_args())
 
@@ -49,21 +51,13 @@ mqtt_username = args['mqtt_username']
 mqtt_password = args['mqtt_password']
 topic = args['topic']
 local = args.get('local')
+cache = args.get('cache')
 homeassistant = args.get('homeassistant')
 debug = args.get('debug')
 
 s_mqtt_topic = "SMART/" + provider + "/" + device_id
 p_mqtt_topic = topic + "/" + device_id
 l_mqtt_topic = p_mqtt_topic + "/" + "SENSOR" + "/" + "#"
-
-def twos_complement(hexstr):
-    value = int(hexstr,16)
-    bits = len(hexstr) * 4
-    
-    if value & (1 << (bits-1)):
-        value -= 1 << bits
-        
-    return value
 
 def on_connect(client, obj, flags, rc):
     print("MQTT connected...")
@@ -76,8 +70,6 @@ def on_glow_connect(client, obj, flags, rc):
     client.subscribe(s_mqtt_topic, 0)
 
 def process_msg(client, userdata, message):
-    status = {}
-    
     try:
         data = json.loads(message.payload)
     except json.JSONDecodeError:
@@ -89,98 +81,20 @@ def process_msg(client, userdata, message):
     if homeassistant:
         HASS_CONFIGURATOR.process_data(data)
 
-    if 'elecMtr' in data:
-        if '0702' in data['elecMtr']:
-            if '00' in data['elecMtr']['0702'] and \
-               '03' in data['elecMtr']['0702']:
-                if '00' in data['elecMtr']['0702']['00'] and \
-                   '01' in data['elecMtr']['0702']['03'] and \
-                   '02' in data['elecMtr']['0702']['03']:
-                    elec_imp = int(data['elecMtr']['0702']['00']['00'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-
-                    if elec_imp > 0:
-                        status["elec_imp"] = elec_imp
-
-                if '01' in data['elecMtr']['0702']['00'] and \
-                   '01' in data['elecMtr']['0702']['03'] and \
-                   '02' in data['elecMtr']['0702']['03']:
-                    elec_exp = int(data['elecMtr']['0702']['00']['01'],16) * int(data['elecMtr']['0702']['03']['01'],16) / int(data['elecMtr']['0702']['03']['02'],16)
-
-                    if elec_exp > 0:
-                        status["elec_exp"] = elec_exp
-
-            if '04' in data['elecMtr']['0702']:
-                if '00' in data['elecMtr']['0702']['04']:
-                    status["watt_now"] = twos_complement(data['elecMtr']['0702']['04']['00'])
-        
-    if 'gasMtr' in data:
-        if '0702' in data['gasMtr']:
-            if '00' in data['gasMtr']['0702'] and \
-               '03' in data['gasMtr']['0702']:
-                if '00' in data['gasMtr']['0702']['00'] and \
-                   '01' in data['gasMtr']['0702']['03'] and \
-                   '02' in data['gasMtr']['0702']['03']:
-                    gas_mtr = int(data['gasMtr']['0702']['00']['00'],16) * int(data['gasMtr']['0702']['03']['01'],16) / int(data['gasMtr']['0702']['03']['02'],16)
-
-                    if gas_mtr > 0:
-                        status["gas_mtr"] = gas_mtr
-
-    print(status)
-
-    mqttc.publish(p_mqtt_topic, json.dumps(status), retain=True)
-
-def process_local_msg(client, userdata, message):
-    status = {}
-
-    try:
-        data = json.loads(message.payload)
-    except json.JSONDecodeError:
-        return
-
-    if debug:
-        print(data)
-
-    if homeassistant:
-        HASS_CONFIGURATOR.process_data(data)
-
-    if 'electricitymeter' in data:
-        if 'energy' in data['electricitymeter']:
-            if 'export' in data['electricitymeter']['energy']:
-                if 'cumulative' in data['electricitymeter']['energy']['export']:
-                    elec_exp = data['electricitymeter']['energy']['export']['cumulative']
-
-                    if elec_exp > 0:
-                        status["elec_exp"] = elec_exp
-
-            if 'import' in data['electricitymeter']['energy']:
-                if 'cumulative' in data['electricitymeter']['energy']['import']:
-                    elec_imp = data['electricitymeter']['energy']['import']['cumulative']
-
-                    if elec_imp > 0:
-                        status["elec_imp"] = elec_imp
-
-        if 'power' in data['electricitymeter']:
-            if 'value' in data['electricitymeter']['power']:
-                status["watt_now"] = int(data['electricitymeter']['power']['value'] * 1000)
-
-    if 'gasmeter' in data:
-        if 'energy' in data['gasmeter']:
-            if 'import' in data['gasmeter']['energy']:
-                if 'cumulative' in data['gasmeter']['energy']['import']:
-                    gas_mtr = data['gasmeter']['energy']['import']['cumulative']
-
-                    if gas_mtr > 0:
-                        status["gas_mtr"] = gas_mtr
+    status = GLOW_PROCESSOR.process_data(data)
 
     print(status)
 
     mqttc.publish(p_mqtt_topic, json.dumps(status), retain=True)
 
 try:
+    # Initialise processor
+    GLOW_PROCESSOR = GlowProcessor(cache, local)
+
     # Create MQTT client
     mqttc = mqtt.Client()
     mqttc.on_connect = on_connect
-    mqttc.on_message = process_local_msg
+    mqttc.on_message = process_msg
     mqttc.username_pw_set(mqtt_username,mqtt_password)
     mqttc.connect(mqtt_address, mqtt_port, 60)
 
