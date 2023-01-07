@@ -54,14 +54,15 @@ def publish_payloads():
         data = json.load(f)
 
     while True:
-        for i in data['payloads']:
-            topic = i['topic']
-            payload = i['payload']
-            print(i)
+        if mqttc.is_connected():
+            for i in data['payloads']:
+                topic = i['topic']
+                payload = i['payload']
+                print(i)
 
-            mqttc.publish(topic, json.dumps(payload), retain=True)
+                mqttc.publish(topic, json.dumps(payload), retain=True)
 
-            time.sleep(interval)
+                time.sleep(interval)
 
 try:
     # Create MQTT client
@@ -69,6 +70,7 @@ try:
     mqttc.on_connect = on_connect
     mqttc.username_pw_set(mqtt_username,mqtt_password)
     mqttc.connect(mqtt_address, mqtt_port, 60)
+    mqttc.loop_start()
 
     publish_payloads()
 except KeyboardInterrupt:
