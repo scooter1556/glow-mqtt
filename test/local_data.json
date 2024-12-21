@@ -179,6 +179,36 @@
                     }
                 }
             }
+        },
+        {
+            "name": "gas_null",
+            "topic": "glow/A1234BC5DE67/SENSOR/gasmeter",
+            "payload": {
+                "gasmeter": {
+                    "timestamp": "1970-01-01T00:00:00Z",
+                    "energy": {
+                        "import": {
+                            "cumulative": null,
+                            "day": null,
+                            "week": null,
+                            "month": null,
+                            "units": "kWh",
+                            "cumulativevol": null,
+                            "cumulativevolunits": "",
+                            "dayvol": null,
+                            "weekvol": null,
+                            "monthvol": null,
+                            "dayweekmonthvolunits": "",
+                            "mprn": "read pending",
+                            "supplier": "---",
+                            "price": {
+                                "unitrate": null,
+                                "standingcharge": null
+                            }
+                        }
+                    }
+                }
+            }
         }
     ]
 }

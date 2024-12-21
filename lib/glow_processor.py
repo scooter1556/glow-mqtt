@@ -39,21 +39,23 @@ class GlowProcessor():
                         if 'cumulative' in data['electricitymeter']['energy']['export']:
                             elec_exp = data['electricitymeter']['energy']['export']['cumulative']
 
-                            if elec_exp > 0:
-                                if self.cache:
-                                    self.elec_exp = elec_exp
-                                else:
-                                    status["elec_exp"] = elec_exp
+                            if elec_exp is not None:
+                                if elec_exp > 0:
+                                    if self.cache:
+                                        self.elec_exp = elec_exp
+                                    else:
+                                        status["elec_exp"] = elec_exp
 
                     if 'import' in data['electricitymeter']['energy']:
                         if 'cumulative' in data['electricitymeter']['energy']['import']:
                             elec_imp = data['electricitymeter']['energy']['import']['cumulative']
 
-                            if elec_imp > 0:
-                                if self.cache:
-                                    self.elec_imp = elec_imp
-                                else:
-                                    status["elec_imp"] = elec_imp
+                            if elec_imp is not None:
+                                if elec_imp > 0:
+                                    if self.cache:
+                                        self.elec_imp = elec_imp
+                                    else:
+                                        status["elec_imp"] = elec_imp
 
                 if 'power' in data['electricitymeter']:
                     if 'value' in data['electricitymeter']['power']:
@@ -70,11 +72,12 @@ class GlowProcessor():
                         if 'cumulative' in data['gasmeter']['energy']['import']:
                             gas_mtr = data['gasmeter']['energy']['import']['cumulative']
 
-                            if gas_mtr > 0:
-                                if self.cache:
-                                    self.gas_mtr = gas_mtr
-                                else:
-                                    status["gas_mtr"] = gas_mtr
+                            if gas_mtr is not None:
+                                if gas_mtr > 0:
+                                    if self.cache:
+                                        self.gas_mtr = gas_mtr
+                                    else:
+                                        status["gas_mtr"] = gas_mtr
         
         else:
             if 'elecMtr' in data:

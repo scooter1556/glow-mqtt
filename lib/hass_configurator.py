@@ -47,15 +47,17 @@ class HassConfigurator():
                         if 'cumulative' in data['electricitymeter']['energy']['export']:
                             elec_exp = data['electricitymeter']['energy']['export']['cumulative']
 
-                            if elec_exp > 0:
-                                electric_export = True
+                            if elec_exp is not None:
+                                if elec_exp > 0:
+                                    electric_export = True
 
                     if not self.electric_import and 'import' in data['electricitymeter']['energy']:
                         if 'cumulative' in data['electricitymeter']['energy']['import']:
                             elec_imp = data['electricitymeter']['energy']['import']['cumulative']
 
-                            if elec_imp > 0:
-                                electric_import = True
+                            if elec_imp is not None:
+                                if elec_imp > 0:
+                                    electric_import = True
 
             if 'gasmeter' in data:
                 if 'energy' in data['gasmeter']:
@@ -63,14 +65,15 @@ class HassConfigurator():
                         if 'cumulative' in data['gasmeter']['energy']['import']:
                             gas_mtr = data['gasmeter']['energy']['import']['cumulative']
 
-                            if gas_mtr > 0:
-                                gas_meter = True
-                                gas_units = data['gasmeter']['energy']['import']['units']
+                            if gas_mtr is not None:
+                                if gas_mtr > 0:
+                                    gas_meter = True
+                                    gas_units = data['gasmeter']['energy']['import']['units']
 
-                                if gas_units == "kWh":
-                                    gas_class = "energy"
-                                else:
-                                    gas_class = "gas"
+                                    if gas_units == "kWh":
+                                        gas_class = "energy"
+                                    else:
+                                        gas_class = "gas"
         else:
             if 'elecMtr' in data:
                 if '0702' in data['elecMtr']:
